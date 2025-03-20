@@ -49,8 +49,8 @@ export const createUser = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
+    const { mobileNumber, password, email } = req.body;
+    if (!mobileNumber || !password) {
       return sendResponse(
         res,
         400,
@@ -58,8 +58,10 @@ export const login = async (req, res) => {
         "Please provide all required fields."
       );
     }
-    const trimmedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: trimmedEmail });
+    if (email) {
+      const trimmedEmail = email.trim().toLowerCase();
+    }
+    const user = await User.findOne({ mobileNumber });
     if (!user) {
       return sendResponse(res, 404, null, "User not found");
     }
