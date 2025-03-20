@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
+import fs from "fs"; // Import fs to delete files after upload
 
 dotenv.config();
 
@@ -9,21 +10,22 @@ cloudinary.config({
   api_secret: process.env.API_SEC,
 });
 
-const uploadOnCloudinary = (fileBuffer, fileName, folder) => {
+// Upload file to Cloudinary using file path
+const uploadOnCloudinary = (filePath, folder) => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
+    cloudinary.uploader.upload(
+      filePath,
       { resource_type: "auto", folder: folder },
       (error, result) => {
         if (error) {
-          console.error("Failed to upload on Cloudinary:", error.message);
+          console.error("Cloudinary Upload Error:", error.message);
           return reject(error);
         }
+        // Delete local file after successful upload
+        fs.unlinkSync(filePath);
         resolve(result);
       }
     );
-
-    // Pipe the buffer to Cloudinary
-    stream.end(fileBuffer);
   });
 };
 

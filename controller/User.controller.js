@@ -95,38 +95,29 @@ export const login = async (req, res) => {
 
 export const driverAggrement = async (req, res) => {
   try {
-    // const { isAgreed } = req.body;
-    const isAgreed = true;
+    const { isAgreed } = req.body;
     const file = req.file;
-    console.log(file);
-    
     const userId = req.userId;
-    // if (!isAgreed) {
-    //   return sendResponse(res, 400, null, "Please Accept All The Condition");
-    // }
+    if (!isAgreed) {
+      return sendResponse(res, 400, null, "Please Accept All The Condition");
+    }
     if (!file) {
       return sendResponse(res, 400, null, "Please Upload The Signature");
     }
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendResponse(res, 404, null, "User not found");
+    }
     if (file) {
-      const uploadResult = await uploadOnCloudinary(
-        file.buffer,
-        file.originalname,
-        "Signature"
-      );
+      const uploadResult = await uploadOnCloudinary(file.path, "Signature");
       if (uploadResult) {
-        sign_image = uploadResult.secure_url;
+        user.sign_image = uploadResult.secure_url;
       } else {
         return sendResponse(res, 500, null, "Failed to upload profile photo");
       }
 
-      const user = await User.findById(userId);
-      if (!user) {
-        return sendResponse(res, 404, null, "User not found");
-      }
+      user.isAgreed = isAgreed;
 
-      if (isAgreed) {
-        user.isAgreed = isAgreed;
-      }
       await user.save();
       return sendResponse(res, 200, user, "Agreement Accepted Successfully");
     }
