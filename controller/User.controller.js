@@ -69,16 +69,19 @@ export const login = async (req, res) => {
     if (!isPasswordMatch) {
       return sendResponse(res, 400, null, "Invalid credentials");
     }
+    
+    // Remove password from user object before sending response
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    // Generate JWT Token
     const tokenData = {
-      userId: user._id,
-      mobileNumber: user.mobileNumber,
-      isAdmin: user.isAdmin,
+      
+      user: userWithoutPassword, // Excluding password
     };
+
     const token = jwt.sign(tokenData, process.env.JWT_KEY, { expiresIn: "3d" });
-    const userResponse = {
-      token: token,
-    };
-    return sendResponse(res, 200, userResponse, "Login successful");
+
+    return sendResponse(res, 200, { token, user: userWithoutPassword }, "Login successful");
   } catch (error) {
     console.error("Login error:", error);
     return sendResponse(res, 500, null, "Internal Server Error");
@@ -103,7 +106,7 @@ export const driverAggrement = async (req, res) => {
     }
 
     if (isAgreed) {
-      user.isAgreed = true;
+      user.isAgreed = isAgreed;
     }
     await user.save();
     return sendResponse(res, 200, user, "Agreement Accepted Successfully");
