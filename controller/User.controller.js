@@ -2,6 +2,7 @@ import { User } from "../models/User.model.js";
 import sendResponse from "../utils/response.util.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import uploadOnCloudinary from "../utils/cloudinary.js";
 
 export const createUser = async (req, res) => {
   try {
@@ -69,19 +70,23 @@ export const login = async (req, res) => {
     if (!isPasswordMatch) {
       return sendResponse(res, 400, null, "Invalid credentials");
     }
-    
+
     // Remove password from user object before sending response
     const { password: _, ...userWithoutPassword } = user.toObject();
 
     // Generate JWT Token
     const tokenData = {
-      
       user: userWithoutPassword, // Excluding password
     };
 
     const token = jwt.sign(tokenData, process.env.JWT_KEY, { expiresIn: "3d" });
 
-    return sendResponse(res, 200, { token, user: userWithoutPassword }, "Login successful");
+    return sendResponse(
+      res,
+      200,
+      { token, user: userWithoutPassword },
+      "Login successful"
+    );
   } catch (error) {
     console.error("Login error:", error);
     return sendResponse(res, 500, null, "Internal Server Error");
@@ -90,26 +95,41 @@ export const login = async (req, res) => {
 
 export const driverAggrement = async (req, res) => {
   try {
-    const { isAgreed } = req.body;
+    // const { isAgreed } = req.body;
+    const isAgreed = true;
     const file = req.file;
+    console.log(file);
+    
     const userId = req.userId;
-    if (!isAgreed) {
-      return sendResponse(res, 400, null, "Please Accept All The Condition");
-    }
-    // if (!file) {
-    //   return sendResponse(res, 400, null, "Please Upload The Signature");
+    // if (!isAgreed) {
+    //   return sendResponse(res, 400, null, "Please Accept All The Condition");
     // }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return sendResponse(res, 404, null, "User not found");
+    if (!file) {
+      return sendResponse(res, 400, null, "Please Upload The Signature");
     }
+    if (file) {
+      const uploadResult = await uploadOnCloudinary(
+        file.buffer,
+        file.originalname,
+        "Signature"
+      );
+      if (uploadResult) {
+        sign_image = uploadResult.secure_url;
+      } else {
+        return sendResponse(res, 500, null, "Failed to upload profile photo");
+      }
 
-    if (isAgreed) {
-      user.isAgreed = isAgreed;
+      const user = await User.findById(userId);
+      if (!user) {
+        return sendResponse(res, 404, null, "User not found");
+      }
+
+      if (isAgreed) {
+        user.isAgreed = isAgreed;
+      }
+      await user.save();
+      return sendResponse(res, 200, user, "Agreement Accepted Successfully");
     }
-    await user.save();
-    return sendResponse(res, 200, user, "Agreement Accepted Successfully");
   } catch (error) {
     console.error("Agreement error:", error);
     return sendResponse(res, 500, null, "Internal Server Error");

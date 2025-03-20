@@ -12,7 +12,7 @@ export const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_KEY);
-    console.log(decoded.user._id);
+    
     
     if (!decoded) {
       return sendResponse(res, 401, "", "Invalid Token");
