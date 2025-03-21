@@ -126,3 +126,29 @@ export const driverAggrement = async (req, res) => {
     return sendResponse(res, 500, null, "Internal Server Error");
   }
 };
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { name, mobileNumber, address } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendResponse(res, 404, null, "User not found");
+    }
+    if (name) {
+      user.name = name;
+    }
+    if (mobileNumber) {
+      user.mobileNumber = mobileNumber;
+    }
+    if (address) {
+      user.address = address;
+    }
+    await user.save();
+    return sendResponse(res, 200, user, "Profile Updated Successfully");
+  } catch (error) {
+    console.error("Profile Update error:", error);
+    return sendResponse(res, 500, null, "Internal Server Error");
+  }
+};

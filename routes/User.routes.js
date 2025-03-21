@@ -3,6 +3,7 @@ import {
   driverAggrement,
   createUser,
   login,
+  updateUserProfile,
 } from "../controller/User.controller.js";
 import { auth } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/multer.js";
@@ -16,5 +17,6 @@ userRouter.post(
   auth,
   driverAggrement
 );
+userRouter.put("/updateUserProfile", auth, updateUserProfile);
 
 export default userRouter;
