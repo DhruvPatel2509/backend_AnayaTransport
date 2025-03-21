@@ -30,7 +30,7 @@ const dailyTaskCheckOutSchema = new mongoose.Schema({
   remark: { type: String },
   truck_no: { type: String },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-});
+},{ timestamps: true });
 export const DailyTaskCheckOut = mongoose.model(
   "DailyTaskCheckOut",
   dailyTaskCheckOutSchema

@@ -7,6 +7,7 @@ import {
 import { auth } from "../middleware/auth.middleware.js";
 
 import { upload } from "../middleware/multer.js";
+import { getDailyReport } from "../controller/DailyReport.js";
 
 const taskRouter = express.Router();
 
@@ -34,4 +35,7 @@ taskRouter.post(
   dailyTaskCheckOutFun
 );
 taskRouter.post("/todaysTask", auth, todaysTask);
+
+taskRouter.get("/dailyReport",auth, getDailyReport);
+
 export default taskRouter;
