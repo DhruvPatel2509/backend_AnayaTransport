@@ -93,37 +93,68 @@ export const login = async (req, res) => {
   }
 };
 
-export const driverAggrement = async (req, res) => {
+export const driverAgreement = async (req, res) => {
   try {
-    const { isAgreed } = req.body;
-    const file = req.file;
+    const { file } = req;
+    // const { isAgreed } = req.body;
+    const isAgreed = true;
     const userId = req.userId;
+
     if (!isAgreed) {
-      return sendResponse(res, 400, null, "Please Accept All The Condition");
+      return sendResponse(res, 400, null, "Please accept all the conditions.");
     }
     if (!file) {
-      return sendResponse(res, 400, null, "Please Upload The Signature");
+      return sendResponse(res, 400, null, "Please upload the signature.");
     }
-    const user = await User.findById(userId);
-    if (!user) {
-      return sendResponse(res, 404, null, "User not found");
-    }
-    if (file) {
-      const uploadResult = await uploadOnCloudinary(file.path, "Signature");
-      if (uploadResult) {
-        user.sign_image = uploadResult.secure_url;
-      } else {
-        return sendResponse(res, 500, null, "Failed to upload profile photo");
-      }
 
-      user.isAgreed = isAgreed;
+    // Get today's date at 00:00:00 to ignore time differences
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      await user.save();
-      return sendResponse(res, 200, user, "Agreement Accepted Successfully");
+    // Check if the user already signed the agreement today
+    const existingAgreement = await User.findOne({
+      _id: userId,
+      isAgreed: true,
+    });
+
+    if (existingAgreement) {
+      return sendResponse(
+        res,
+        400,
+        null,
+        "You have already signed the agreement."
+      );
     }
+
+    // Upload signature to Cloudinary
+    const uploadResult = await uploadOnCloudinary(file.path, "Signature");
+    if (!uploadResult) {
+      return sendResponse(res, 500, null, "Failed to upload signature.");
+    }
+
+    // Update user with signature and agreement status
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        sign_image: uploadResult.secure_url,
+        isAgreed: true, // Ensure agreement is stored
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return sendResponse(res, 404, null, "User not found.");
+    }
+
+    return sendResponse(
+      res,
+      200,
+      updatedUser,
+      "Agreement signed successfully."
+    );
   } catch (error) {
     console.error("Agreement error:", error);
-    return sendResponse(res, 500, null, "Internal Server Error");
+    return sendResponse(res, 500, null, "Internal Server Error.");
   }
 };
 

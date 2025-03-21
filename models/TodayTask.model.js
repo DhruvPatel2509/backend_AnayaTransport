@@ -8,10 +8,15 @@ const todayTaskSchema = new mongoose.Schema(
     remark: { type: String },
     salaryRemark: { type: String },
     salary_type: { type: Boolean, required: true, default: false },
-    trailer_no: { type: String, required: true },
+    trailer_no: {
+      type: [String], // Array of strings
+
+      required: true,
+    },
     truck_no: { type: String, required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }
 );
 
-const TodayTask = mongoose.model("TodayTask", todayTaskSchema);
+export const TodayTask = mongoose.model("TodayTask", todayTaskSchema);

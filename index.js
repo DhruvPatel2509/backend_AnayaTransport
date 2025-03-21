@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./utils/db.js";
 import userRouter from "./routes/User.routes.js";
+import taskRouter from "./routes/Task.routes.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use("/api/v1/user", userRouter);
+app.use("/api/v1/task", taskRouter);
 
 // Define a basic route for the root URL
 app.get("/", (req, res) => {

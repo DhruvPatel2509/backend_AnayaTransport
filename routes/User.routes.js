@@ -1,7 +1,8 @@
 import express from "express";
 import {
-  driverAggrement,
+  
   createUser,
+  driverAgreement,
   login,
   updateUserProfile,
 } from "../controller/User.controller.js";
@@ -15,7 +16,7 @@ userRouter.post(
   "/driverAggrement",
   upload.single("file"),
   auth,
-  driverAggrement
+  driverAgreement
 );
 userRouter.put("/updateUserProfile", auth, updateUserProfile);
 
