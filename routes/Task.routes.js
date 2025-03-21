@@ -1,5 +1,9 @@
 import express from "express";
-import { dailyTaskCheckIn, todaysTask } from "../controller/Task.controller.js";
+import {
+  dailyTaskCheckInFun,
+  dailyTaskCheckOutFun,
+  todaysTask,
+} from "../controller/Task.controller.js";
 import { auth } from "../middleware/auth.middleware.js";
 
 import { upload } from "../middleware/multer.js";
@@ -7,7 +11,7 @@ import { upload } from "../middleware/multer.js";
 const taskRouter = express.Router();
 
 taskRouter.post(
-  "/dailyTask",
+  "/dailyTaskCheckIn",
   auth,
   upload.fields([
     { name: "truckDisplayImage", maxCount: 1 }, // Display view of the truck
@@ -17,7 +21,17 @@ taskRouter.post(
     { name: "rightTruckImage", maxCount: 1 }, // Right view of the truck
     { name: "damageTruckImage", maxCount: 1 }, // Damage view of the truck
   ]),
-  dailyTaskCheckIn
+  dailyTaskCheckInFun
+);
+
+taskRouter.post(
+  "/dailyTaskCheckOut",
+  auth,
+  upload.fields([
+    { name: "truckDisplayImage", maxCount: 1 },
+    { name: "damageTruckImage", maxCount: 1 },
+  ]),
+  dailyTaskCheckOutFun
 );
 taskRouter.post("/todaysTask", auth, todaysTask);
 export default taskRouter;

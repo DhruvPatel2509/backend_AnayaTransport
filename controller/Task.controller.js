@@ -1,13 +1,16 @@
 import sendResponse from "../utils/response.util.js";
-import { DailyTask } from "../models/DailyTask.model.js";
 import { WeeklyTask } from "../models/WeeklyTask.model.js";
 import { TodayTask } from "../models/TodayTask.model.js";
 
 import moment from "moment";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import { User } from "../models/User.model.js";
+import {
+  DailyTaskCheckIn,
+  DailyTaskCheckOut,
+} from "../models/DailyTask.model.js";
 
-export const dailyTaskCheckIn = async (req, res) => {
+export const dailyTaskCheckInFun = async (req, res) => {
   try {
     // const { isDamagedTruck, isInspection, isLight, isTierPressure } = req.body;
     const isDamagedTruck = false;
@@ -121,7 +124,7 @@ export const dailyTaskCheckIn = async (req, res) => {
     }
 
     // Create a new DailyTask entry
-    const dailyTask = new DailyTask({
+    const dailyTask = new DailyTaskCheckIn({
       truckDisplayImage: uploadTruckDisplayImage?.secure_url,
       backTruckImage: uploadBackTruckImage?.secure_url,
       frontTruckImage: uploadFrontTruckImage?.secure_url,
@@ -205,15 +208,17 @@ export const todaysTask = async (req, res) => {
     // Save task to the database
     await todayTask.save();
 
-    // Find the latest DailyTask entry for the user
-    const latestDailyTask = await DailyTask.findOne({ user: userId }).sort({
-      createdAt: -1,
-    });
+    // Find the latest DailyTaskCheckIn entry for the user
+    const latestDailyTaskCheckIn = await dailyTaskCheckIn
+      .findOne({ user: userId })
+      .sort({
+        createdAt: -1,
+      });
 
-    if (latestDailyTask) {
+    if (latestDailyTaskCheckIn) {
       // Update DailyTask with the truck_no
-      latestDailyTask.truck_no = truck_no;
-      await latestDailyTask.save();
+      latestDailyTaskCheckIn.truck_no = truck_no;
+      await latestDailyTaskCheckIn.save();
     }
 
     return sendResponse(
@@ -229,6 +234,139 @@ export const todaysTask = async (req, res) => {
       500,
       null,
       "An error occurred while processing today's task. Please try again later."
+    );
+  }
+};
+
+export const dailyTaskCheckOutFun = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const isDamagedTruck = false;
+    const remark = "No damage";
+
+    // Extract user details
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendResponse(res, 404, null, "User not found.");
+    }
+
+    // Format today's date for querying
+    const todayStart = moment().utc().startOf("day").toDate();
+    const todayEnd = moment().utc().endOf("day").toDate();
+
+    // Find today's task
+    const todayTask = await TodayTask.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lt: todayEnd },
+    });
+
+    if (!todayTask || !todayTask.truck_no) {
+      return sendResponse(
+        res,
+        400,
+        null,
+        "No truck assigned for today’s task."
+      );
+    }
+
+    const truck_no = todayTask.truck_no;
+
+    // Find today's check-in record
+    const todayDate = moment().utc().format("YYYY-MM-DD");
+
+    let checkInRecord = user.checkInRecords.find((record) => {
+      console.log("Checking record:", record.checkInTime); // Debugging log
+      return (
+        moment(record.checkInTime).utc().format("YYYY-MM-DD") === todayDate
+      );
+    });
+
+    if (!checkInRecord) {
+      return sendResponse(
+        res,
+        400,
+        null,
+        "No check-in record found for today."
+      );
+    }
+
+    // Update the check-out time
+    checkInRecord.checkOutTime = new Date();
+
+    // Save updated user record
+    await user.save();
+
+    // Generate Cloudinary folder path
+    const userName = user.name?.replace(/\s+/g, "_") || `user_${userId}`;
+    const cloudinaryFolder = `daily-checkout/${moment().format(
+      "YYYY-MM-DD"
+    )}/${userName}`;
+
+    // Extract image files from request
+    const truckDisplayImage = req.files?.truckDisplayImage?.[0];
+    const damageTruckImage = req.files?.damageTruckImage?.[0];
+
+    if (!truckDisplayImage) {
+      return sendResponse(res, 400, null, "Truck display image is required.");
+    }
+
+    if (isDamagedTruck && !damageTruckImage) {
+      return sendResponse(
+        res,
+        400,
+        null,
+        "Truck is marked as damaged, but no damage image was provided."
+      );
+    }
+
+    // Function to upload an image
+    const uploadImage = async (file, imageType) => {
+      if (!file) return null;
+      try {
+        const publicId = `${imageType}_${userId}`;
+        return await uploadOnCloudinary(file.path, cloudinaryFolder, publicId);
+      } catch (error) {
+        console.error("Cloudinary upload error:", error.message);
+        return null;
+      }
+    };
+
+    // Upload images to Cloudinary
+    const uploadTruckDisplayImage = await uploadImage(
+      truckDisplayImage,
+      "checkout_truckDisplayImage"
+    );
+    const uploadDamageTruckImage = isDamagedTruck
+      ? await uploadImage(damageTruckImage, "checkout_damageTruckImage")
+      : null;
+
+    // Create a new DailyTaskCheckOut entry
+    const dailyTaskCheckOut = new DailyTaskCheckOut({
+      truckDisplayImage: uploadTruckDisplayImage?.secure_url,
+      isDamagedTruck,
+      damageTruckImage: isDamagedTruck
+        ? uploadDamageTruckImage?.secure_url
+        : null,
+      remark,
+      truck_no,
+      user: userId,
+    });
+
+    await dailyTaskCheckOut.save();
+
+    return sendResponse(
+      res,
+      201,
+      dailyTaskCheckOut,
+      "Truck check-out completed successfully."
+    );
+  } catch (error) {
+    console.error("Daily task check-out error:", error);
+    return sendResponse(
+      res,
+      500,
+      null,
+      "An error occurred while processing the check-out. Please try again later."
     );
   }
 };
